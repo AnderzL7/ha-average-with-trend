@@ -584,15 +584,19 @@ class AverageSensor(SensorEntity):
             and current_states
         ):
             current_avg_now = sum(current_states) / len(current_states)
-            denom = (actual_end_ts - start_ts)
+            denom = actual_end_ts - start_ts
             if denom > 0:
                 frac = max(0.0, min(1.0, (now_ts - start_ts) / denom))
-                trending = float(self._attr_native_value) * frac + current_avg_now * (1.0 - frac)
+                trending = float(self._attr_native_value) * frac + current_avg_now * (
+                    1.0 - frac
+                )
             else:
                 trending = current_avg_now
             self.trending_towards = round(trending, self._precision)
+            self.last_value = round(current_avg_now, self._precision)
         else:
             self.trending_towards = None
+            self.last_value = None
 
         _LOGGER.debug("Current trend: %s", self.trending_towards)
 
