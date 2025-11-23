@@ -51,6 +51,7 @@ ATTR_COUNT: Final = "count"
 ATTR_MIN_VALUE: Final = "min_value"
 ATTR_MAX_VALUE: Final = "max_value"
 ATTR_TRENDING_TOWARDS: Final = "trending_towards"
+ATTR_LAST_VALUE: Final = "last_value"
 #
 ATTR_TO_PROPERTY: Final = [
     ATTR_START,
@@ -62,6 +63,7 @@ ATTR_TO_PROPERTY: Final = [
     ATTR_MAX_VALUE,
     ATTR_MIN_VALUE,
     ATTR_TRENDING_TOWARDS,
+    ATTR_LAST_VALUE,
 ]
 
 

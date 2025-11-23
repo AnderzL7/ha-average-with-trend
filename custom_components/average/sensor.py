@@ -67,6 +67,7 @@ from .const import (
     ATTR_START,
     ATTR_TO_PROPERTY,
     ATTR_TRENDING_TOWARDS,
+    ATTR_LAST_VALUE,
     CONF_DURATION,
     CONF_END,
     CONF_PERIOD_KEYS,
@@ -154,6 +155,7 @@ class AverageSensor(SensorEntity):
             ATTR_MAX_VALUE,
             ATTR_MIN_VALUE,
             ATTR_TRENDING_TOWARDS,
+            ATTR_LAST_VALUE,
         }
     )
 
@@ -185,6 +187,7 @@ class AverageSensor(SensorEntity):
         self.available_sources = 0
         self.count = 0
         self.trending_towards = None
+        self.last_value = None
         self.min_value = self.max_value = None
 
         self._attr_name = name
@@ -483,7 +486,7 @@ class AverageSensor(SensorEntity):
         values = []
         self.count = 0
         self.min_value = self.max_value = None
-        trending_last_state = 0
+        current_states = []
 
         # pylint: disable=too-many-nested-blocks
         for entity_id in self.sources:
@@ -557,9 +560,10 @@ class AverageSensor(SensorEntity):
                         last_elapsed = end_ts - last_time
                         value += last_state * last_elapsed
                         elapsed += last_elapsed
-                        trending_last_state = last_state
                         if elapsed:
                             value /= elapsed
+                        if isinstance(last_state, numbers.Number):
+                            current_states.append(last_state)
 
                     _LOGGER.debug("Historical average state: %s", value)
 
@@ -574,16 +578,21 @@ class AverageSensor(SensorEntity):
         else:
             self._attr_native_value = None
 
-        if trending_last_state:
-            current_average = round(
-                (sum(values) + trending_last_state) / (len(values) + 1), self._precision
-            )
-            if self._precision < 1:
-                current_average = int(current_average)
-            part_of_period = (now_ts - start_ts) / (actual_end_ts - start_ts)
-            to_now = self._attr_native_value * part_of_period
-            to_end = current_average * (1 - part_of_period)
-            self.trending_towards = to_now + to_end
+        if (
+            self._period is not None
+            and self._attr_native_value is not None
+            and current_states
+        ):
+            current_avg_now = sum(current_states) / len(current_states)
+            denom = (actual_end_ts - start_ts)
+            if denom > 0:
+                frac = max(0.0, min(1.0, (now_ts - start_ts) / denom))
+                trending = float(self._attr_native_value) * frac + current_avg_now * (1.0 - frac)
+            else:
+                trending = current_avg_now
+            self.trending_towards = round(trending, self._precision)
+        else:
+            self.trending_towards = None
 
         _LOGGER.debug("Current trend: %s", self.trending_towards)
 
